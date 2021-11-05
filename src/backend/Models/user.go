@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"local.packages/database"
+	"github.com/atoyr/passed/database"
 )
 
 type User struct {
@@ -41,7 +41,7 @@ func (user *User) Signup(dbcontext *sql.DB) error {
 	}
 	wps := database.WherePhrases{}
 	wps.Append(database.Equal, "Email", user.Email)
-	database.GetProfiles(tx)
+	database.GetProfiles(tx, wps)
 	user.AccountID = ""
 	user.ProfileID = ""
 
