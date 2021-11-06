@@ -20,6 +20,7 @@ type User struct {
 	Nickname                 string    `json:"nickname"`
 	AccountValidFlg          bool      `json:"account_valid_flg"`
 	ProfileValidFlg          bool      `json:"profile_valid_flg"`
+	UrgeSignin               bool      `json:"urge_signin"`
 	AccountInsertDatetime    time.Time `json:"account_insert_datetime"`
 	AccountModifiedDatetime  time.Time `json:"account_modified_datetime"`
 	AccountInsertAccountID   string    `json:"account_insert_account_id"`

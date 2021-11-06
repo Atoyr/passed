@@ -6,12 +6,13 @@ import (
 )
 
 type Account struct {
-	ID        string `json:"id"`
-	ProfileID string `json:"profile_id"`
-	Primary   string `json:"primary"`
-	Secondary string `json:"secondary"`
-	Shared    string `json:"shared"`
-	ValidFlg  bool   `json:"valid_flg"`
+	ID         string `json:"id"`
+	ProfileID  string `json:"profile_id"`
+	Primary    string `json:"primary"`
+	Secondary  string `json:"secondary"`
+	Shared     string `json:"shared"`
+	ValidFlg   bool   `json:"valid_flg"`
+	UrgeSignin bool   `json:"urge_signin"`
 	History
 }
 
@@ -23,6 +24,7 @@ const getAccountQuery string = `
  	,Secondary
  	,Shared
  	,ValidFlg
+	,UrgeSignin
  	,InsertDatetime
  	,ModifiedDatetime
  	,InsertAccountID
@@ -78,6 +80,7 @@ func GetAuthenictions(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 			account.Secondary,
 			account.Shared,
 			account.ValidFlg,
+			account.UrgeSignin,
 			account.InsertDatetime,
 			account.ModifiedDatetime,
 			account.InsertAccountID,

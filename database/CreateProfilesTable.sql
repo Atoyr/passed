@@ -28,7 +28,7 @@ CREATE TABLE [dbo].[Profiles](
 ) ON [PRIMARY]
 GO
 
-ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__ID]  DEFAULT NewID() FOR [ID]
+ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__ID]  DEFAULT (NewID()) FOR [ID]
 GO
 
 ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__ValidFlg]  DEFAULT 1 FOR [ValidFlg]
