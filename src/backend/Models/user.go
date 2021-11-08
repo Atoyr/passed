@@ -5,15 +5,14 @@ import (
 	"time"
 
 	"github.com/atoyr/passed/database"
-	"github.com/google/uuid"
 )
 
 type User struct {
 	AccountID                string    `json:"account_id"`
 	ProfileID                string    `json:"profile_id"`
-	Primary                  string    `json:"primary"`
-	Secondary                string    `json:"secondary"`
-	Shared                   string    `json:"shared"`
+	//Signature                  string    `json:"signatu"`
+	// Private                string    `json:"private"`
+	// Public                   string    `json:"public"`
 	Email                    string    `json:"email"`
 	FirstName                string    `json:"first_name"`
 	MiddleName               string    `json:"middle_name"`
@@ -36,7 +35,7 @@ type User struct {
 	ProfileModifiedSystemID  string    `json:"profile_modified_system_id"`
 }
 
-func (user *User) Signup(dbcontext *sql.DB) (signin, error) {
+func (user *User) Create(dbcontext *sql.DB) error {
 	tx, err := dbcontext.Begin()
 	if err != nil {
 		return err
@@ -50,10 +49,4 @@ func (user *User) Signup(dbcontext *sql.DB) (signin, error) {
 	return nil
 }
 
-func generateUUID() (string, err) {
-	u, err := uuid.NewRandom()
-	if err != nil {
-		return "", err
-	}
-	return u.String(), nil
-}
+
