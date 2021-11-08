@@ -8,11 +8,11 @@ import (
 )
 
 type User struct {
-	AccountID                string    `json:"account_id"`
-	ProfileID                string    `json:"profile_id"`
-	//Signature                  string    `json:"signatu"`
-	// Private                string    `json:"private"`
-	// Public                   string    `json:"public"`
+	AccountID                string    `jso:"account_id"`
+	ProfileID                string    `jso:"profile_id"`
+	Signature                string    `json:"signatu"`
+	Private                  string    `json:"private"`
+	Public                   string    `json:"public"`
 	Email                    string    `json:"email"`
 	FirstName                string    `json:"first_name"`
 	MiddleName               string    `json:"middle_name"`
@@ -48,5 +48,3 @@ func (user *User) Create(dbcontext *sql.DB) error {
 
 	return nil
 }
-
-

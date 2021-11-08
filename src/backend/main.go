@@ -1,9 +1,7 @@
 package main
 
 import (
-	"database/sql"
-	"log"
-	"net/http"
+	"fmt"
 
 	"github.com/atoyr/passed/models"
 	"github.com/urfave/cli/v2"
@@ -27,18 +25,27 @@ func main() {
 	user = "..."
 	password = "..."
 
-	http.HandleFunc("/", handler) // ハンドラを登録してウェブページを表示させる
-	http.HandleFunc("/signup", signupHandler)
-	http.ListenAndServe(":8080", nil)
+	// http.HandleFunc("/", handler) // ハンドラを登録してウェブページを表示させる
+	// http.HandleFunc("/signup", signupHandler)
+	// http.ListenAndServe(":8080", nil)
 
-	d, err := sql.Open("sqlserver", connectionstring())
+	// d, err := sql.Open("sqlserver", connectionstring())
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer d.Close()
+
+	signup := models.Signup{}
+	signup.Email = "example@example.com"
+	signup.Password = "password"
+	signup.FirstName = "bob"
+	signup.MiddleName = ""
+	signup.LastName = "tom"
+	signup.Nickname = "Alice"
+	_, err := signup.Signup(nil)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
-	defer d.Close()
-
-	user := models.User{}
-	user.Signup(d)
 }
 
 func connectionstring() string {

@@ -8,9 +8,9 @@ import (
 type Account struct {
 	ID         string `json:"id"`
 	ProfileID  string `json:"profile_id"`
-	Primary    string `json:"primary"`
-	Secondary  string `json:"secondary"`
-	Shared     string `json:"shared"`
+	Signature  []byte `json:"signature"`
+	Private    []byte `json:"private"`
+	Public     []byte `json:"public"`
 	ValidFlg   bool   `json:"valid_flg"`
 	UrgeSignin bool   `json:"urge_signin"`
 	History
@@ -20,9 +20,9 @@ const getAccountQuery string = `
  select
  	ID
  	,ProfileID
- 	,Primary
- 	,Secondary
- 	,Shared
+ 	,Signature
+ 	,Private
+ 	,Public
  	,ValidFlg
 	,UrgeSignin
  	,InsertDatetime
@@ -38,9 +38,9 @@ const getAccountQuery string = `
 const insertAccountQuery string = `
 insert into dbo.Accounts (
  	 ProfileID
- 	,Primary
- 	,Secondary
- 	,Shared
+ 	,Signature
+ 	,Private
+ 	,Public
  	,ValidFlg
  	,InsertAccountID
  	,InsertSystemID
@@ -76,9 +76,9 @@ func GetAuthenictions(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 		if err := rows.Scan(
 			account.ID,
 			account.ProfileID,
-			account.Primary,
-			account.Secondary,
-			account.Shared,
+			account.Signature,
+			account.Private,
+			account.Public,
 			account.ValidFlg,
 			account.UrgeSignin,
 			account.InsertDatetime,
@@ -93,6 +93,42 @@ func GetAuthenictions(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 		accounts = append(accounts, account)
 	}
 	return accounts, nil
+}
+
+func (account *Account) Insert(tx *sql.Tx) error {
+	wps := WherePhrases{}
+	wps.Append(Equal, "ID", account.ID)
+	accounts, err := GetAuthenictions(tx, wps)
+	if err != nil {
+		return err
+	}
+	if len(accounts) > 0 {
+		return fmt.Errorf("Account Exists")
+	} else {
+		err = account.insert(tx)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (account *Account) Update(tx *sql.Tx) error {
+	wps := WherePhrases{}
+	wps.Append(Equal, "ID", account.ID)
+	accounts, err := GetAuthenictions(tx, wps)
+	if err != nil {
+		return err
+	}
+	if len(accounts) > 0 {
+		err = account.update(tx, accounts[0])
+	} else {
+		return fmt.Errorf("Account Not Found")
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (account *Account) InsertOrUpdate(tx *sql.Tx) error {
@@ -119,9 +155,9 @@ func (account *Account) insert(tx *sql.Tx) error {
 	err := tx.QueryRow(
 		query,
 		account.ProfileID,
-		account.Primary,
-		account.Secondary,
-		account.Shared,
+		account.Signature,
+		account.Private,
+		account.Public,
 		account.ValidFlg,
 		account.InsertAccountID,
 		account.InsertSystemID,

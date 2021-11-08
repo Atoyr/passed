@@ -1,15 +1,14 @@
 package models
 
 import (
-	"crypto/aes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"database/sql"
 	"encoding/hex"
-	"encoding/pem"
 	"fmt"
 
+	"github.com/atoyr/passed/database"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/sha3"
 )
@@ -40,21 +39,14 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 	fmt.Println(hex.EncodeToString(hash))
 	u := uuid.NewSHA1(uuid.New(), hash)
 
-	passhash := make([]byte, 64)
-	passshake := sha3.NewShake256()
+	passhash := make([]byte, 32)
+	passshake := sha3.NewShake128()
 	passshake.Write(hash)
 	passshake.Write(u.NodeID())
 	passshake.Read(passhash)
 	// Passohrase
 	// passphrase := hex.EncodeToString(passhash)
-
-	// Generate AES Key
-	block, err := aes.NewCipher(passhash)
-	if err != nil {
-		return authentication, err
-	}
-	signature := make([]byte, len(s.Email))
-	block.Encrypt([]byte(s.Email), signature)
+	fmt.Printf("%x\n", passhash)
 
 	// Generate Private/public key
 	// size of key (bits)
@@ -65,30 +57,84 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 		return authentication, err
 	}
 	// Get public key from private key and encrypt
-	public := &privateKey.PublicKey
-	private := ExportRsaPrivateKeyAsPemStr(privateKey)
+	publicKey := &privateKey.PublicKey
 
-	user := User{}
-	user.Email = s.Email
-	user.FirstName = s.FirstName
-	user.MiddleName = s.MiddleName
-	user.LastName = s.LastName
-	user.Nickname = s.Nickname
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	publicKeyBytes := x509.MarshalPKCS1PublicKey(publicKey)
+
+	signature, err := AesEncript(passhash, []byte(s.Email))
+	if err != nil {
+		return authentication, err
+	}
+
+	private, err := AesEncript(passhash, privateKeyBytes)
+	if err != nil {
+		return authentication, err
+	}
+
+	if dbcontext != nil {
+		// Insert Database
+		profile := database.Profile{}
+		profile.Email = s.Email
+		profile.FirstName = s.FirstName
+		profile.MiddleName = s.MiddleName
+		profile.LastName = s.LastName
+		profile.Nickname = s.Nickname
+		profile.InsertSystemID = "models/signup"
+		profile.ModifiedSystemID = "models/signup"
+
+		account := database.Account{}
+		account.Signature = signature
+		account.Private = private
+		account.Public = publicKeyBytes
+		account.InsertSystemID = "models/signup"
+		account.ModifiedSystemID = "models/signup"
+
+		tx, err := dbcontext.Begin()
+		if err != nil {
+			return authentication, err
+		}
+		err = profile.Insert(tx)
+		if err != nil {
+			tx.Rollback()
+		}
+		account.ProfileID = profile.ID
+		err = account.Insert(tx)
+		if err != nil {
+			tx.Rollback()
+		}
+		tx.Commit()
+	} else {
+		signatureStr, err := AesDecript(passhash, signature)
+		if err != nil {
+			fmt.Println(err)
+		}
+		privateStr, err := AesDecript(passhash, private)
+		if err != nil {
+			fmt.Println(err)
+		}
+		pr, err := x509.ParsePKCS1PrivateKey(privateStr)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(s.Email)
+		fmt.Println(u.String())
+		fmt.Println()
+		fmt.Println("--- sign ---")
+		fmt.Printf("%x\n", signature)
+		fmt.Printf("%s|\n", string(signatureStr))
+
+		fmt.Println("--- private ---")
+		fmt.Printf("%x\n", private)
+		fmt.Printf("%s\n", PrivateKeyToString(pr))
+		fmt.Println("--- result ---")
+		fmt.Printf(PrivateKeyToString(privateKey))
+		fmt.Printf(PublicKeyToString(publicKey))
+	}
 
 	authentication.Email = s.Email
 	authentication.Key = u.String()
 	authentication.Password = s.Password
 
 	return authentication, nil
-}
-
-func ExportRsaPrivateKeyAsPemStr(privkey *rsa.PrivateKey) string {
-	privkey_bytes := x509.MarshalPKCS1PrivateKey(privkey)
-	privkey_pem := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: privkey_bytes,
-		},
-	)
-	return string(privkey_pem)
 }

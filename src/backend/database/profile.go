@@ -46,3 +46,7 @@ func GetProfiles(tx *sql.Tx, wps WherePhrases) ([]Profile, error) {
 	}
 	return profiles, nil
 }
+
+func (profile *Profile) Insert(tx *sql.Tx) error {
+	return nil
+}
