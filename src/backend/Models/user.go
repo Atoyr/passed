@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/atoyr/passed/database"
+	"github.com/google/uuid"
 )
 
 type User struct {
@@ -35,7 +36,7 @@ type User struct {
 	ProfileModifiedSystemID  string    `json:"profile_modified_system_id"`
 }
 
-func (user *User) Signup(dbcontext *sql.DB) error {
+func (user *User) Signup(dbcontext *sql.DB) (signin, error) {
 	tx, err := dbcontext.Begin()
 	if err != nil {
 		return err
@@ -47,4 +48,12 @@ func (user *User) Signup(dbcontext *sql.DB) error {
 	user.ProfileID = ""
 
 	return nil
+}
+
+func generateUUID() (string, err) {
+	u, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
 }
