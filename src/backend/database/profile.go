@@ -63,6 +63,14 @@ values (
 )
 `
 
+const updateProfileQuery string = `
+update [dbo].[Profiles]
+set
+	XX = XX
+where
+
+`
+
 func GetProfiles(tx *sql.Tx, wps WherePhrases) ([]Profile, error) {
 	profiles := make([]Profile, 0)
 	query := getAccountQuery
