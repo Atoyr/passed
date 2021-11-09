@@ -48,16 +48,16 @@ insert into [dbo].[Accounts] (
 	,[ModifiedSystemID]
 	)
 output [inserted].[ID]
-value (
-	,$1
-	,$2
-	,$3
-	,$4
-	,$5
-	,$6
-	,$7
-	,$8
-	,$9
+values (
+	 @p1
+	,@p2
+	,@p3
+	,@p4
+	,@p5
+	,[inserted].[ID]
+	,@p6
+	,[inserted].[ID]
+	,@p7
 )
 `
 
@@ -66,7 +66,7 @@ func GetAuthenictions(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 	query := getAccountQuery
 	wp, values := wps.CreateWherePhrase(1)
 	query += wp
-	rows, err := tx.Query(query, values)
+	rows, err := tx.Query(query, values...)
 	if err != nil {
 		return nil, err
 	}
@@ -164,14 +164,10 @@ func (account *Account) insert(tx *sql.Tx) error {
 	query := insertAccountQuery
 	id := mssql.UniqueIdentifier{}
 	profileId := mssql.UniqueIdentifier{}
-	insertAccountId := mssql.UniqueIdentifier{}
 	insertSystemId := mssql.UniqueIdentifier{}
-	modifiedAccountId := mssql.UniqueIdentifier{}
 	modifiedSystemId := mssql.UniqueIdentifier{}
 	profileId.Scan(account.ProfileID)
-	insertAccountId.Scan(account.InsertAccountID)
 	insertSystemId.Scan(account.InsertSystemID)
-	modifiedAccountId.Scan(account.ModifiedAccountID)
 	modifiedSystemId.Scan(account.ModifiedSystemID)
 	err := tx.QueryRow(
 		query,
@@ -180,9 +176,7 @@ func (account *Account) insert(tx *sql.Tx) error {
 		account.Private,
 		account.Public,
 		account.ValidFlg,
-		insertAccountId,
 		insertSystemId,
-		modifiedAccountId,
 		modifiedSystemId).Scan(&id)
 	if err != nil {
 		return err

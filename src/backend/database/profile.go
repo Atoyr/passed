@@ -34,11 +34,11 @@ select
 	,[ModifiedAccountID]
 	,[ModifiedSystemID]
 from
-	[dbo].[Profile]
+	[dbo].[Profiles]
 `
 
 const insertProfileQuery string = `
-insert into [dbo].[Profile] (
+insert into [dbo].[Profiles] (
 	 [Email]
 	,[FirstName]
 	,[MiddleName]
@@ -50,16 +50,16 @@ insert into [dbo].[Profile] (
 	,[ModifiedSystemID]
 	)
 output [inserted].[ID]
-value (
-	,$1
-	,$2
-	,$3
-	,$4
-	,$5
-	,$6
-	,$7
-	,$8
-	,$9
+values (
+	 @p1
+	,@p2
+	,@p3
+	,@p4
+	,@p5
+	,@p6
+	,@p7
+	,@p8
+	,@p9
 )
 `
 
@@ -68,7 +68,7 @@ func GetProfiles(tx *sql.Tx, wps WherePhrases) ([]Profile, error) {
 	query := getAccountQuery
 	wp, values := wps.CreateWherePhrase(1)
 	query += wp
-	rows, err := tx.Query(query, values)
+	rows, err := tx.Query(query, values...)
 	if err != nil {
 		return nil, err
 	}

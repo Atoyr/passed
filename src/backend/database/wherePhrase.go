@@ -18,7 +18,7 @@ const (
 func (wct WhereComparisonType) CreateWherePhrase(value string, index int) (string, int) {
 	s := fmt.Sprintf(" %s %s ", value, wct.String())
 	if wct != IsNull && wct != IsNotNull {
-		s = fmt.Sprintf("%s$%d", s, index)
+		s = fmt.Sprintf("%s@p%d", s, index)
 		index = index + 1
 	}
 	return s, index
@@ -27,7 +27,7 @@ func (wct WhereComparisonType) CreateWherePhrase(value string, index int) (strin
 func (wct WhereComparisonType) String() string {
 	switch wct {
 	case Equal:
-		return " == "
+		return " = "
 	case NotEqual:
 		return " != "
 	case MoreThan:
@@ -79,7 +79,8 @@ func (wps *WherePhrases) CreateWherePhrase(startIndex int) (string, []interface{
 	for _, v := range *wps {
 		var s string
 		s, index = v.Type.CreateWherePhrase(v.Key, index)
-		ifs = append(ifs, s)
+		b = append(b, s...)
+		ifs = append(ifs, v.Value)
 	}
 	return string(b), ifs
 }
