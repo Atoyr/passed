@@ -63,14 +63,6 @@ values (
 )
 `
 
-const updateProfileQuery string = `
-update [dbo].[Profiles]
-set
-	XX = XX
-where
-
-`
-
 func GetProfiles(tx *sql.Tx, wps WherePhrases) ([]Profile, error) {
 	profiles := make([]Profile, 0)
 	query := getAccountQuery
@@ -159,5 +151,12 @@ func (profile *Profile) insert(tx *sql.Tx) error {
 		return err
 	}
 	profile.ID = id.String()
+	return nil
+}
+
+func (profile *Profile) update(tx *sql.Tx) error {
+	up := NewUpdatePhrase("dbo", "Profile")
+	up.ColumnValue["ModifiedAccountId"] = profile.ModifiedAccountID
+
 	return nil
 }

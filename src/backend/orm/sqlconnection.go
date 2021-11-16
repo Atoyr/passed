@@ -1,4 +1,4 @@
-package database
+package orm
 
 type Sqlconnection struct {
 	database string
