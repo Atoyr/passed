@@ -14,12 +14,12 @@ CREATE TABLE [dbo].[Accounts](
 	[Private] [varbinary](4192) NOT NULL,
 	[Public] [varbinary](4192) NOT NULL,
 	[ValidFlg] [bit] NOT NULL,
-	[InsertDatetime] [datetime] NOT NULL,
-	[ModifiedDatetime] [datetime] NOT NULL,
-	[InsertAccountID] [uniqueidentifier] NOT NULL,
+	[InsertAt] [datetime] NOT NULL,
+	[UpdateAt] [datetime] NOT NULL,
+	[InsertProfileID] [uniqueidentifier] NOT NULL,
 	[InsertSystemID] [uniqueidentifier] NOT NULL,
-	[ModifiedAccountID] [uniqueidentifier] NOT NULL,
-	[ModifiedSystemID] [uniqueidentifier] NOT NULL
+	[UpdateProfileID] [uniqueidentifier] NOT NULL,
+	[UpdateSystemID] [uniqueidentifier] NOT NULL
  CONSTRAINT [PK_Account] PRIMARY KEY CLUSTERED
 (
 	[ID] ASC
@@ -30,8 +30,8 @@ GO
 ALTER TABLE [dbo].[Accounts] ADD CONSTRAINT [DF__Account__ID]  DEFAULT (NewID()) FOR [ID]
 GO
 
-ALTER TABLE [dbo].[Accounts] ADD CONSTRAINT [DF__Account__InsertDatetime]  DEFAULT (getdate()) FOR [InsertDatetime]
+ALTER TABLE [dbo].[Accounts] ADD CONSTRAINT [DF__Account__InsertAt]  DEFAULT (getdate()) FOR [InsertAt]
 GO
 
-ALTER TABLE [dbo].[Accounts] ADD CONSTRAINT [DF__Account__ModifiedDatetime]  DEFAULT (getdate()) FOR [ModifiedDatetime]
+ALTER TABLE [dbo].[Accounts] ADD CONSTRAINT [DF__Account__UpdateAt]  DEFAULT (getdate()) FOR [UpdateAt]
 GO

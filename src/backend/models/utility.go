@@ -8,6 +8,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"io"
+
+	"golang.org/x/crypto/sha3"
 )
 
 func AesEncript(key []byte, src []byte) ([]byte, error) {
@@ -23,10 +25,12 @@ func AesEncript(key []byte, src []byte) ([]byte, error) {
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return nil, err
 	}
+	copy(chiperBytes, iv)
 
 	// Encrypt
 	encryptStream := cipher.NewCTR(block, iv)
-	encryptStream.XORKeyStream(chiperBytes[aes.BlockSize:], []byte(src))
+	encryptStream.XORKeyStream(chiperBytes[aes.BlockSize:], src)
+
 	return chiperBytes, nil
 }
 
@@ -39,9 +43,20 @@ func AesDecript(key []byte, src []byte) ([]byte, error) {
 
 	// Decrpt
 	descripted := make([]byte, len(src[aes.BlockSize:]))
+	// src[:aes.BlockSize] is iv
 	decryptStream := cipher.NewCTR(block, src[:aes.BlockSize])
 	decryptStream.XORKeyStream(descripted, src[aes.BlockSize:])
 	return descripted, nil
+}
+
+func GetSha3Hash(u ...[]byte) []byte {
+	hash := make([]byte, 32)
+	shake := sha3.NewShake128()
+	for _, v := range u {
+		shake.Write(v)
+	}
+	shake.Read(hash)
+	return hash
 }
 
 // PrivateKeyToBytes private key to bytes

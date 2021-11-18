@@ -5,12 +5,10 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/atoyr/passed/database"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/sha3"
 )
 
 type Signup struct {
@@ -22,6 +20,8 @@ type Signup struct {
 	Nickname   string `json:"nickname"`
 }
 
+const SIGNUP_SYSTEMID string = "D35DFEBF-8443-4EB5-95CF-F31DAF27D0DD"
+
 // Signup is create account, profile and sec key
 func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 	// AES Key   : hashed(hashed password + uuid)
@@ -32,21 +32,9 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 	authentication := Authentication{}
 
 	// Generate UUID
-	hash := make([]byte, 64)
-	sh := sha3.NewShake256()
-	sh.Write([]byte(s.Password))
-	sh.Read(hash)
-	fmt.Println(hex.EncodeToString(hash))
+	hash := GetSha3Hash([]byte(s.Password))
 	u := uuid.NewSHA1(uuid.New(), hash)
-
-	passhash := make([]byte, 32)
-	passshake := sha3.NewShake128()
-	passshake.Write(hash)
-	passshake.Write(u.NodeID())
-	passshake.Read(passhash)
-	// Passohrase
-	// passphrase := hex.EncodeToString(passhash)
-	fmt.Printf("%x\n", passhash)
+	passhash := GetSha3Hash(hash, u.NodeID())
 
 	// Generate Private/public key
 	// size of key (bits)
@@ -59,15 +47,13 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 	// Get public key from private key and encrypt
 	publicKey := &privateKey.PublicKey
 
-	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
-	publicKeyBytes := x509.MarshalPKCS1PublicKey(publicKey)
-
+	// Generate Signature
 	signature, err := AesEncript(passhash, []byte(s.Email))
 	if err != nil {
 		return authentication, err
 	}
-
-	private, err := AesEncript(passhash, privateKeyBytes)
+	// Generate private
+	private, err := AesEncript(passhash, x509.MarshalPKCS1PrivateKey(privateKey))
 	if err != nil {
 		return authentication, err
 	}
@@ -80,15 +66,16 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 		profile.MiddleName = s.MiddleName
 		profile.LastName = s.LastName
 		profile.Nickname = s.Nickname
-		profile.InsertSystemID = "models/signup"
-		profile.ModifiedSystemID = "models/signup"
+		profile.InsertSystemID = SIGNUP_SYSTEMID
+		profile.UpdateSystemID = SIGNUP_SYSTEMID
 
 		account := database.Account{}
 		account.Signature = signature
 		account.Private = private
-		account.Public = publicKeyBytes
-		account.InsertSystemID = "models/signup"
-		account.ModifiedSystemID = "models/signup"
+		account.Public = x509.MarshalPKCS1PublicKey(publicKey)
+		account.ValidFlg = true
+		account.InsertSystemID = SIGNUP_SYSTEMID
+		account.UpdateSystemID = SIGNUP_SYSTEMID
 
 		tx, err := dbcontext.Begin()
 		if err != nil {
@@ -97,11 +84,15 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 		err = profile.Insert(tx)
 		if err != nil {
 			tx.Rollback()
+			return authentication, err
 		}
 		account.ProfileID = profile.ID
+		account.InsertProfileID = account.ProfileID
+		account.UpdateProfileID = account.ProfileID
 		err = account.Insert(tx)
 		if err != nil {
 			tx.Rollback()
+			return authentication, err
 		}
 		tx.Commit()
 	} else {

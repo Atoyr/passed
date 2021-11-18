@@ -27,12 +27,12 @@ select
 	,[LastName]
 	,[Nickname]
 	,[ValidFlg]
-	,[InsertDatetime]
-	,[ModifiedDatetime]
-	,[InsertAccountID]
+	,[InsertAt]
+	,[UpdateAt]
+	,[InsertProfileID]
 	,[InsertSystemID]
-	,[ModifiedAccountID]
-	,[ModifiedSystemID]
+	,[UpdateProfileID]
+	,[UpdateSystemID]
 from
 	[dbo].[Profiles]
 `
@@ -44,10 +44,10 @@ insert into [dbo].[Profiles] (
 	,[MiddleName]
 	,[LastName]
 	,[Nickname]
-	,[InsertAccountID]
+	,[InsertProfileID]
 	,[InsertSystemID]
-	,[ModifiedAccountID]
-	,[ModifiedSystemID]
+	,[UpdateProfileID]
+	,[UpdateSystemID]
 	)
 output [inserted].[ID]
 values (
@@ -65,7 +65,7 @@ values (
 
 func GetProfiles(tx *sql.Tx, wps WherePhrases) ([]Profile, error) {
 	profiles := make([]Profile, 0)
-	query := getAccountQuery
+	query := getProfileQuery
 	wp, values := wps.CreateWherePhrase(1)
 	query += wp
 	rows, err := tx.Query(query, values...)
@@ -76,32 +76,32 @@ func GetProfiles(tx *sql.Tx, wps WherePhrases) ([]Profile, error) {
 	for rows.Next() {
 		profile := Profile{}
 		id := mssql.UniqueIdentifier{}
-		insertAccountId := mssql.UniqueIdentifier{}
+		insertProfileId := mssql.UniqueIdentifier{}
 		insertSystemId := mssql.UniqueIdentifier{}
-		modifiedAccountId := mssql.UniqueIdentifier{}
-		modifiedSystemId := mssql.UniqueIdentifier{}
+		updateProfileId := mssql.UniqueIdentifier{}
+		updateSystemId := mssql.UniqueIdentifier{}
 		if err := rows.Scan(
-			id,
-			profile.Email,
-			profile.FirstName,
-			profile.MiddleName,
-			profile.LastName,
-			profile.Nickname,
-			profile.ValidFlg,
-			profile.InsertDatetime,
-			profile.ModifiedDatetime,
-			insertAccountId,
-			insertSystemId,
-			modifiedAccountId,
-			modifiedSystemId,
+			&id,
+			&profile.Email,
+			&profile.FirstName,
+			&profile.MiddleName,
+			&profile.LastName,
+			&profile.Nickname,
+			&profile.ValidFlg,
+			&profile.InsertAt,
+			&profile.UpdateAt,
+			&insertProfileId,
+			&insertSystemId,
+			&updateProfileId,
+			&updateSystemId,
 		); err != nil {
 			return nil, err
 		}
 		profile.ID = id.String()
-		profile.InsertAccountID = insertAccountId.String()
+		profile.InsertProfileID = insertProfileId.String()
 		profile.InsertSystemID = insertSystemId.String()
-		profile.ModifiedAccountID = modifiedAccountId.String()
-		profile.ModifiedSystemID = modifiedSystemId.String()
+		profile.UpdateProfileID = updateProfileId.String()
+		profile.UpdateSystemID = updateSystemId.String()
 		profiles = append(profiles, profile)
 	}
 	return profiles, nil
@@ -128,14 +128,14 @@ func (profile *Profile) Insert(tx *sql.Tx) error {
 func (profile *Profile) insert(tx *sql.Tx) error {
 	query := insertProfileQuery
 	id := mssql.UniqueIdentifier{}
-	insertAccountId := mssql.UniqueIdentifier{}
+	insertProfileId := mssql.UniqueIdentifier{}
 	insertSystemId := mssql.UniqueIdentifier{}
-	modifiedAccountId := mssql.UniqueIdentifier{}
-	modifiedSystemId := mssql.UniqueIdentifier{}
-	insertAccountId.Scan(profile.InsertAccountID)
+	updateProfileId := mssql.UniqueIdentifier{}
+	updateSystemId := mssql.UniqueIdentifier{}
+	insertProfileId.Scan(profile.InsertProfileID)
 	insertSystemId.Scan(profile.InsertSystemID)
-	modifiedAccountId.Scan(profile.ModifiedAccountID)
-	modifiedSystemId.Scan(profile.ModifiedSystemID)
+	updateProfileId.Scan(profile.UpdateProfileID)
+	updateSystemId.Scan(profile.UpdateSystemID)
 	err := tx.QueryRow(
 		query,
 		profile.Email,
@@ -143,10 +143,10 @@ func (profile *Profile) insert(tx *sql.Tx) error {
 		profile.MiddleName,
 		profile.LastName,
 		profile.Nickname,
-		insertAccountId,
+		insertProfileId,
 		insertSystemId,
-		modifiedAccountId,
-		modifiedSystemId).Scan(&id)
+		updateProfileId,
+		updateSystemId).Scan(&id)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (profile *Profile) insert(tx *sql.Tx) error {
 
 func (profile *Profile) update(tx *sql.Tx) error {
 	up := NewUpdatePhrase("dbo", "Profile")
-	up.ColumnValue["ModifiedAccountId"] = profile.ModifiedAccountID
+	up.ColumnValue["UpdateProfileId"] = profile.UpdateProfileID
 
 	return nil
 }

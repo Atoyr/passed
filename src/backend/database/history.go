@@ -3,10 +3,10 @@ package database
 import "time"
 
 type History struct {
-	InsertDatetime    time.Time `json:"insert_datetime"`
-	ModifiedDatetime  time.Time `json:"modified_datetime"`
-	InsertAccountID   string    `json:"insert_account_id"`
-	InsertSystemID    string    `json:"insert_system_id"`
-	ModifiedAccountID string    `json:"modified_account_id"`
-	ModifiedSystemID  string    `json:"modified_system_id"`
+	InsertAt        time.Time `json:"insert_at"`
+	UpdateAt        time.Time `json:"update_at"`
+	InsertProfileID string    `json:"insert_profile_id"`
+	InsertSystemID  string    `json:"insert_system_id"`
+	UpdateProfileID string    `json:"update_profile_id"`
+	UpdateSystemID  string    `json:"update_system_id"`
 }

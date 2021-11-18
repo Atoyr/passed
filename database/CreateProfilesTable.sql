@@ -15,12 +15,12 @@ CREATE TABLE [dbo].[Profiles](
 	[LastName] [nvarchar](64) NOT NULL,
 	[Nickname] [nvarchar](32) NOT NULL,
 	[ValidFlg] [bit] NOT NULL,
-	[InsertDatetime] [datetime] NOT NULL,
-	[ModifiedDatetime] [datetime] NOT NULL,
-	[InsertAccountID] [uniqueidentifier] NOT NULL,
+	[InsertAt] [datetime] NOT NULL,
+	[UpdateAt] [datetime] NOT NULL,
+	[InsertProfileID] [uniqueidentifier] NOT NULL,
 	[InsertSystemID] [uniqueidentifier] NOT NULL,
-	[ModifiedAccountID] [uniqueidentifier] NOT NULL,
-	[ModifiedSystemID] [uniqueidentifier] NOT NULL
+	[UpdateProfileID] [uniqueidentifier] NOT NULL,
+	[UpdateSystemID] [uniqueidentifier] NOT NULL
  CONSTRAINT [PK_Profile] PRIMARY KEY CLUSTERED
 (
 	[ID], [Email] ASC
@@ -34,8 +34,8 @@ GO
 ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__ValidFlg]  DEFAULT 1 FOR [ValidFlg]
 GO
 
-ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__InsertDatetime]  DEFAULT (getdate()) FOR [InsertDatetime]
+ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__InsertAt]  DEFAULT (getdate()) FOR [InsertAt]
 GO
 
-ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__ModifiedDatetime]  DEFAULT (getdate()) FOR [ModifiedDatetime]
+ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__UpdateAt]  DEFAULT (getdate()) FOR [UpdateAt]
 GO

@@ -76,7 +76,10 @@ func (wps *WherePhrases) CreateWherePhrase(startIndex int) (string, []interface{
 		b = append(b, " where "...)
 	}
 
-	for _, v := range *wps {
+	for i, v := range *wps {
+		if i != 0 {
+			b = append(b, " AND "...)
+		}
 		var s string
 		s, index = v.Type.CreateWherePhrase(v.Key, index)
 		b = append(b, s...)

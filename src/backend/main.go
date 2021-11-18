@@ -1,13 +1,17 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
 
-	"github.com/atoyr/passed/models"
 	"github.com/urfave/cli/v2"
 )
 
 const APPNAME = "passed"
+const VERSION = "0.0.1"
 
 // SQL DB Information
 var sqlserver string
@@ -15,19 +19,68 @@ var instance string
 var user string
 var password string
 var database string
+var webport int
 
 func main() {
 	app := new(cli.App)
 	app.Name = APPNAME
-	database = "passed"
-	instance = "..."
-	sqlserver = "..."
-	user = "..."
-	password = "..."
+	app.Version = VERSION
+	app.Flags = []cli.Flag{
+		&cli.StringFlag{
+			Name:        "server",
+			Aliases:     []string{"s"},
+			Value:       "",
+			Usage:       "SQLServer Server Name",
+			EnvVars:     []string{"DBSERVER"},
+			Destination: &sqlserver,
+			Required:    true,
+		},
+		&cli.StringFlag{
+			Name:        "instance",
+			Aliases:     []string{"i"},
+			Value:       "",
+			Usage:       "SQLServer Server Instance Name",
+			EnvVars:     []string{"DBINSTANCE"},
+			Destination: &instance,
+		},
+		&cli.StringFlag{
+			Name:        "user",
+			Aliases:     []string{"u"},
+			Value:       "sa",
+			Usage:       "SQLServer Server User",
+			EnvVars:     []string{"DBUSER"},
+			Destination: &user,
+		},
+		&cli.StringFlag{
+			Name:        "password",
+			Aliases:     []string{"p"},
+			Value:       "",
+			Usage:       "SQLServer Server Password",
+			EnvVars:     []string{"DBPASS"},
+			Destination: &password,
+			Required:    true,
+		},
+		&cli.StringFlag{
+			Name:        "database",
+			Aliases:     []string{"d"},
+			Value:       "master",
+			Usage:       "SQLServer Server using database",
+			Destination: &database,
+		},
+		&cli.IntFlag{
+			Name:        "httpport",
+			Aliases:     []string{"hp"},
+			Value:       8080,
+			Usage:       "http access port no",
+			Destination: &webport,
+		},
+	}
 
-	// http.HandleFunc("/", handler) // ハンドラを登録してウェブページを表示させる
-	// http.HandleFunc("/signup", signupHandler)
-	// http.ListenAndServe(":8080", nil)
+	app.Action = action
+	err := app.Run(os.Args)
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	// d, err := sql.Open("sqlserver", connectionstring())
 	// if err != nil {
@@ -35,17 +88,30 @@ func main() {
 	// }
 	// defer d.Close()
 
-	signup := models.Signup{}
-	signup.Email = "example@example.com"
-	signup.Password = "password"
-	signup.FirstName = "bob"
-	signup.MiddleName = ""
-	signup.LastName = "tom"
-	signup.Nickname = "Alice"
-	_, err := signup.Signup(nil)
+}
+
+func action(c *cli.Context) error {
+	// DBチェック
+	d, err := sql.Open("sqlserver", connectionstring())
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
+		return err
 	}
+	defer d.Close()
+	if err := d.Ping(); err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	http.HandleFunc("/", handler) // ハンドラを登録してウェブページを表示させる
+	http.HandleFunc("/signup", signupHandler)
+	http.HandleFunc("/singin", signinHandler)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", webport), nil)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	return nil
 }
 
 func connectionstring() string {

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 
@@ -25,12 +26,12 @@ select
 	,[Private]
 	,[Public]
 	,[ValidFlg]
-	,[InsertDatetime]
-	,[ModifiedDatetime]
-	,[InsertAccountID]
+	,[InsertAt]
+	,[UpdateAt]
+	,[InsertProfileID]
 	,[InsertSystemID]
-	,[ModifiedAccountID]
-	,[ModifiedSystemID]
+	,[UpdateProfileID]
+	,[UpdateSystemID]
 from
 	[dbo].[Accounts]
 `
@@ -42,10 +43,10 @@ insert into [dbo].[Accounts] (
 	,[Private]
 	,[Public]
 	,[ValidFlg]
-	,[InsertAccountID]
+	,[InsertProfileID]
 	,[InsertSystemID]
-	,[ModifiedAccountID]
-	,[ModifiedSystemID]
+	,[UpdateProfileID]
+	,[UpdateSystemID]
 	)
 output [inserted].[ID]
 values (
@@ -54,14 +55,14 @@ values (
 	,@p3
 	,@p4
 	,@p5
-	,[inserted].[ID]
 	,@p6
-	,[inserted].[ID]
 	,@p7
+	,@p8
+	,@p9
 )
 `
 
-func GetAuthenictions(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
+func GetAccounts(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 	accounts := make([]Account, 0)
 	query := getAccountQuery
 	wp, values := wps.CreateWherePhrase(1)
@@ -75,32 +76,32 @@ func GetAuthenictions(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 		account := Account{}
 		id := mssql.UniqueIdentifier{}
 		profileId := mssql.UniqueIdentifier{}
-		insertAccountId := mssql.UniqueIdentifier{}
+		insertProfileId := mssql.UniqueIdentifier{}
 		insertSystemId := mssql.UniqueIdentifier{}
-		modifiedAccountId := mssql.UniqueIdentifier{}
-		modifiedSystemId := mssql.UniqueIdentifier{}
+		updateProfileId := mssql.UniqueIdentifier{}
+		updateSystemId := mssql.UniqueIdentifier{}
 		if err := rows.Scan(
-			id,
-			profileId,
-			account.Signature,
-			account.Private,
-			account.Public,
-			account.ValidFlg,
-			account.InsertDatetime,
-			account.ModifiedDatetime,
-			insertAccountId,
-			insertSystemId,
-			modifiedAccountId,
-			modifiedSystemId,
+			&id,
+			&profileId,
+			&account.Signature,
+			&account.Private,
+			&account.Public,
+			&account.ValidFlg,
+			&account.InsertAt,
+			&account.UpdateAt,
+			&insertProfileId,
+			&insertSystemId,
+			&updateProfileId,
+			&updateSystemId,
 		); err != nil {
 			return nil, err
 		}
 		account.ID = id.String()
 		account.ProfileID = profileId.String()
-		account.InsertAccountID = insertAccountId.String()
+		account.InsertProfileID = insertProfileId.String()
 		account.InsertSystemID = insertSystemId.String()
-		account.ModifiedAccountID = modifiedAccountId.String()
-		account.ModifiedSystemID = modifiedSystemId.String()
+		account.UpdateProfileID = updateProfileId.String()
+		account.UpdateSystemID = updateSystemId.String()
 		accounts = append(accounts, account)
 	}
 	return accounts, nil
@@ -109,7 +110,7 @@ func GetAuthenictions(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 func (account *Account) Insert(tx *sql.Tx) error {
 	wps := WherePhrases{}
 	wps.Append(Equal, "ID", account.ID)
-	accounts, err := GetAuthenictions(tx, wps)
+	accounts, err := GetAccounts(tx, wps)
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (account *Account) Insert(tx *sql.Tx) error {
 func (account *Account) Update(tx *sql.Tx) error {
 	wps := WherePhrases{}
 	wps.Append(Equal, "ID", account.ID)
-	accounts, err := GetAuthenictions(tx, wps)
+	accounts, err := GetAccounts(tx, wps)
 	if err != nil {
 		return err
 	}
@@ -142,33 +143,19 @@ func (account *Account) Update(tx *sql.Tx) error {
 	return nil
 }
 
-func (account *Account) InsertOrUpdate(tx *sql.Tx) error {
-	wps := WherePhrases{}
-	wps.Append(Equal, "ID", account.ID)
-	accounts, err := GetAuthenictions(tx, wps)
-	if err != nil {
-		return err
-	}
-	if len(accounts) > 0 {
-		err = account.update(tx, accounts[0])
-	} else {
-		err = account.insert(tx)
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (account *Account) insert(tx *sql.Tx) error {
 	query := insertAccountQuery
 	id := mssql.UniqueIdentifier{}
 	profileId := mssql.UniqueIdentifier{}
 	insertSystemId := mssql.UniqueIdentifier{}
-	modifiedSystemId := mssql.UniqueIdentifier{}
+	updateSystemId := mssql.UniqueIdentifier{}
+	insertProfileId := mssql.UniqueIdentifier{}
+	updateProfileId := mssql.UniqueIdentifier{}
 	profileId.Scan(account.ProfileID)
 	insertSystemId.Scan(account.InsertSystemID)
-	modifiedSystemId.Scan(account.ModifiedSystemID)
+	updateSystemId.Scan(account.UpdateSystemID)
+	insertProfileId.Scan(account.InsertProfileID)
+	updateProfileId.Scan(account.UpdateProfileID)
 	err := tx.QueryRow(
 		query,
 		profileId,
@@ -176,8 +163,10 @@ func (account *Account) insert(tx *sql.Tx) error {
 		account.Private,
 		account.Public,
 		account.ValidFlg,
+		insertProfileId,
 		insertSystemId,
-		modifiedSystemId).Scan(&id)
+		updateProfileId,
+		updateSystemId).Scan(&id)
 	if err != nil {
 		return err
 	}
@@ -186,8 +175,65 @@ func (account *Account) insert(tx *sql.Tx) error {
 }
 
 func (account *Account) update(tx *sql.Tx, beforeAccount Account) error {
-	if beforeAccount.ModifiedDatetime.Equal(account.ModifiedDatetime) {
+	if beforeAccount.UpdateAt.Equal(account.UpdateAt) {
+		buffer := make([]byte, 4192)
+		values := make([]interface{}, 0)
+		isUpdate := false
+		index := 1
 
+		buffer = append(buffer, "UPDATE [dbo].[Accounts] "...)
+		buffer = append(buffer, "SET "...)
+
+		if !bytes.Equal(beforeAccount.Signature, account.Signature) {
+			if isUpdate {
+				buffer = append(buffer, " ,"...)
+			}
+			isUpdate = true
+
+			buffer = append(buffer, []byte(fmt.Sprintf("Signature = @p%d", index))...)
+			values = append(values, account.Signature)
+			index++
+		}
+		if !bytes.Equal(beforeAccount.Private, account.Private) {
+			isUpdate = true
+			buffer = append(buffer, []byte(fmt.Sprintf("Private = @p%d, ", index))...)
+			values = append(values, account.Private)
+			index++
+		}
+		if !bytes.Equal(beforeAccount.Public, account.Public) {
+			isUpdate = true
+			buffer = append(buffer, []byte(fmt.Sprintf("Public = @p%d, ", index))...)
+			values = append(values, account.Public)
+			index++
+		}
+		if beforeAccount.ValidFlg != account.ValidFlg {
+			isUpdate = true
+			buffer = append(buffer, []byte(fmt.Sprintf("ValidFlg = @p%d, ", index))...)
+			values = append(values, account.ValidFlg)
+			index++
+		}
+
+		if !isUpdate {
+			return fmt.Errorf("No Update Column")
+		}
+
+		buffer = append(buffer, "UpdateAt = GETDATE(), "...)
+		buffer = append(buffer, []byte(fmt.Sprintf("UpdateProfileID = @p%d, ", index))...)
+		values = append(values, account.UpdateProfileID)
+		index++
+		buffer = append(buffer, []byte(fmt.Sprintf("UpdateSystemID = @p%d ", index))...)
+		values = append(values, account.UpdateSystemID)
+		index++
+
+		buffer = append(buffer, []byte(fmt.Sprintf("Where ID = @p%d ", index))...)
+		values = append(values, account.ID)
+		index++
+
+		query := string(buffer)
+		_, err := tx.Exec(query, values...)
+		if err != nil {
+			return err
+		}
 	} else {
 		return fmt.Errorf("X0001")
 	}
