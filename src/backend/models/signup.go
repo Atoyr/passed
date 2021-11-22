@@ -81,11 +81,38 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 		if err != nil {
 			return authentication, err
 		}
+
+		profilewps := database.WherePhrases{}
+		profilewps.Append(database.Equal, "Email", s.Email)
+		profiles, err := database.GetProfiles(tx, profilewps)
+		if err != nil {
+			tx.Rollback()
+			return authentication, err
+		}
+		if len(profiles) > 0 {
+			tx.Rollback()
+			return authentication, fmt.Errorf("Profile is exists")
+		}
+
 		err = profile.Insert(tx)
 		if err != nil {
 			tx.Rollback()
 			return authentication, err
 		}
+
+		accountwps := database.WherePhrases{}
+		accountwps.Append(database.Equal, "ProfileID", profile.ID)
+		accountwps.Append(database.Equal, "ValidFlg", true)
+		accounts, err := database.GetAccounts(tx, accountwps)
+		if err != nil {
+			tx.Rollback()
+			return authentication, err
+		}
+		if len(accounts) > 0 {
+			tx.Rollback()
+			return authentication, fmt.Errorf("Account is exists")
+		}
+
 		account.ProfileID = profile.ID
 		account.InsertProfileID = account.ProfileID
 		account.UpdateProfileID = account.ProfileID
@@ -95,32 +122,6 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 			return authentication, err
 		}
 		tx.Commit()
-	} else {
-		signatureStr, err := AesDecript(passhash, signature)
-		if err != nil {
-			fmt.Println(err)
-		}
-		privateStr, err := AesDecript(passhash, private)
-		if err != nil {
-			fmt.Println(err)
-		}
-		pr, err := x509.ParsePKCS1PrivateKey(privateStr)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(s.Email)
-		fmt.Println(u.String())
-		fmt.Println()
-		fmt.Println("--- sign ---")
-		fmt.Printf("%x\n", signature)
-		fmt.Printf("%s|\n", string(signatureStr))
-
-		fmt.Println("--- private ---")
-		fmt.Printf("%x\n", private)
-		fmt.Printf("%s\n", PrivateKeyToString(pr))
-		fmt.Println("--- result ---")
-		fmt.Printf(PrivateKeyToString(privateKey))
-		fmt.Printf(PublicKeyToString(publicKey))
 	}
 
 	authentication.Email = s.Email

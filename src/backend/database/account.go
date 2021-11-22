@@ -10,7 +10,7 @@ import (
 
 type Account struct {
 	ID        string `json:"id"`
-	ProfileID string `json:"profile_id"`
+	Email     string `json:"email"`
 	Signature []byte `json:"signature"`
 	Private   []byte `json:"private"`
 	Public    []byte `json:"public"`
@@ -21,45 +21,46 @@ type Account struct {
 const getAccountQuery string = `
 select
 	 [ID]
-	,[ProfileID]
+	,[Email]
 	,[Signature]
 	,[Private]
 	,[Public]
 	,[ValidFlg]
 	,[InsertAt]
 	,[UpdateAt]
-	,[InsertProfileID]
+	,[InsertAccountID]
 	,[InsertSystemID]
-	,[UpdateProfileID]
+	,[UpdateAccountID]
 	,[UpdateSystemID]
 from
 	[dbo].[Accounts]
 `
 
 const insertAccountQuery string = `
+declare @nid = NEWID();
 insert into [dbo].[Accounts] (
-	 [ProfileID]
+	 [ID]
+	,[Email]
 	,[Signature]
 	,[Private]
 	,[Public]
-	,[ValidFlg]
-	,[InsertProfileID]
+	,[InsertAccountID]
 	,[InsertSystemID]
-	,[UpdateProfileID]
+	,[UpdateAccountID]
 	,[UpdateSystemID]
 	)
 output [inserted].[ID]
 values (
-	 @p1
+	 @nid
+	,@p1
 	,@p2
 	,@p3
 	,@p4
+	,@nid
 	,@p5
+	,@nid
 	,@p6
-	,@p7
-	,@p8
-	,@p9
-)
+);
 `
 
 func GetAccounts(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
@@ -97,10 +98,10 @@ func GetAccounts(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 			return nil, err
 		}
 		account.ID = id.String()
-		account.ProfileID = profileId.String()
-		account.InsertProfileID = insertProfileId.String()
+		account.AccountID = profileId.String()
+		account.InsertAccountID = insertProfileId.String()
 		account.InsertSystemID = insertSystemId.String()
-		account.UpdateProfileID = updateProfileId.String()
+		account.UpdateAccountID = updateProfileId.String()
 		account.UpdateSystemID = updateSystemId.String()
 		accounts = append(accounts, account)
 	}
@@ -151,11 +152,11 @@ func (account *Account) insert(tx *sql.Tx) error {
 	updateSystemId := mssql.UniqueIdentifier{}
 	insertProfileId := mssql.UniqueIdentifier{}
 	updateProfileId := mssql.UniqueIdentifier{}
-	profileId.Scan(account.ProfileID)
+	profileId.Scan(account.AccountID)
 	insertSystemId.Scan(account.InsertSystemID)
 	updateSystemId.Scan(account.UpdateSystemID)
-	insertProfileId.Scan(account.InsertProfileID)
-	updateProfileId.Scan(account.UpdateProfileID)
+	insertProfileId.Scan(account.InsertAccountID)
+	updateProfileId.Scan(account.UpdateAccountID)
 	err := tx.QueryRow(
 		query,
 		profileId,
@@ -218,8 +219,8 @@ func (account *Account) update(tx *sql.Tx, beforeAccount Account) error {
 		}
 
 		buffer = append(buffer, "UpdateAt = GETDATE(), "...)
-		buffer = append(buffer, []byte(fmt.Sprintf("UpdateProfileID = @p%d, ", index))...)
-		values = append(values, account.UpdateProfileID)
+		buffer = append(buffer, []byte(fmt.Sprintf("UpdateAccountID = @p%d, ", index))...)
+		values = append(values, account.UpdateAccountID)
 		index++
 		buffer = append(buffer, []byte(fmt.Sprintf("UpdateSystemID = @p%d ", index))...)
 		values = append(values, account.UpdateSystemID)

@@ -1,6 +1,3 @@
-USE [passed]
-GO
-
 SET ANSI_NULLS ON
 GO
 
@@ -9,7 +6,7 @@ GO
 
 CREATE TABLE [dbo].[Profiles](
 	[ID] [uniqueidentifier] NOT NULL,
-	[Email] [nvarchar](128) NOT NULL,
+	[AccountID] [uniqueidentifier] NOT NULL,
 	[FirstName] [nvarchar](64) NOT NULL,
 	[MiddleName] [nvarchar](64) NOT NULL,
 	[LastName] [nvarchar](64) NOT NULL,
@@ -17,25 +14,39 @@ CREATE TABLE [dbo].[Profiles](
 	[ValidFlg] [bit] NOT NULL,
 	[InsertAt] [datetime] NOT NULL,
 	[UpdateAt] [datetime] NOT NULL,
-	[InsertProfileID] [uniqueidentifier] NOT NULL,
+	[InsertAccountID] [uniqueidentifier] NOT NULL,
 	[InsertSystemID] [uniqueidentifier] NOT NULL,
-	[UpdateProfileID] [uniqueidentifier] NOT NULL,
-	[UpdateSystemID] [uniqueidentifier] NOT NULL
- CONSTRAINT [PK_Profile] PRIMARY KEY CLUSTERED
-(
-	[ID], [Email] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, FILLFACTOR = 90, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+	[UpdateAccountID] [uniqueidentifier] NOT NULL,
+	[UpdateSystemID] [uniqueidentifier] NOT NULL,
+	[ValidFrom] [datetime2] GENERATED ALWAYS AS ROW START,
+	[ValidTo] [datetime2] GENERATED ALWAYS AS ROW END,
+	PERIOD FOR SYSTEM_TIME (ValidFrom, ValidTo),
+
+	CONSTRAINT [PK__Profiles] PRIMARY KEY NONCLUSTERED
+	(
+		[ID] ASC
+	)
+	WITH
+	(
+		PAD_INDEX = OFF,
+		 STATISTICS_NORECOMPUTE = OFF,
+		IGNORE_DUP_KEY = OFF,
+		ALLOW_ROW_LOCKS = ON,
+		ALLOW_PAGE_LOCKS = ON,
+		FILLFACTOR = 90,
+		OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF
+	) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
 
-ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__ID]  DEFAULT (NewID()) FOR [ID]
+ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profiles__ID]  DEFAULT (NewID()) FOR [ID]
 GO
 
-ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__ValidFlg]  DEFAULT 1 FOR [ValidFlg]
+ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profiles__ValidFlg]  DEFAULT 1 FOR [ValidFlg]
 GO
 
-ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__InsertAt]  DEFAULT (getdate()) FOR [InsertAt]
+ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profiles__InsertAt]  DEFAULT (getdate()) FOR [InsertAt]
 GO
 
-ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profile__UpdateAt]  DEFAULT (getdate()) FOR [UpdateAt]
+ALTER TABLE [dbo].[Profiles] ADD  CONSTRAINT [DF__Profiles__UpdateAt]  DEFAULT (getdate()) FOR [UpdateAt]
 GO
