@@ -9,7 +9,7 @@ import (
 
 type Profile struct {
 	ID         string `json:"id"`
-	Email      string `json:"email"`
+	AccountID  string `json:"account_id"`
 	FirstName  string `json:"first_name"`
 	MiddleName string `json:"middle_name"`
 	LastName   string `json:"last_name"`
@@ -21,7 +21,7 @@ type Profile struct {
 const getProfileQuery string = `
 select
 	 [ID]
-	,[Email]
+	,[AccountID]
 	,[FirstName]
 	,[MiddleName]
 	,[LastName]
@@ -29,9 +29,9 @@ select
 	,[ValidFlg]
 	,[InsertAt]
 	,[UpdateAt]
-	,[InsertProfileID]
+	,[InsertAccountID]
 	,[InsertSystemID]
-	,[UpdateProfileID]
+	,[UpdateAccountID]
 	,[UpdateSystemID]
 from
 	[dbo].[Profiles]
@@ -39,14 +39,14 @@ from
 
 const insertProfileQuery string = `
 insert into [dbo].[Profiles] (
-	 [Email]
+	 [AccountID]
 	,[FirstName]
 	,[MiddleName]
 	,[LastName]
 	,[Nickname]
-	,[InsertProfileID]
+	,[InsertAccountID]
 	,[InsertSystemID]
-	,[UpdateProfileID]
+	,[UpdateAccountID]
 	,[UpdateSystemID]
 	)
 output [inserted].[ID]
@@ -76,13 +76,14 @@ func GetProfiles(tx *sql.Tx, wps WherePhrases) ([]Profile, error) {
 	for rows.Next() {
 		profile := Profile{}
 		id := mssql.UniqueIdentifier{}
+		accountId := mssql.UniqueIdentifier{}
 		insertProfileId := mssql.UniqueIdentifier{}
 		insertSystemId := mssql.UniqueIdentifier{}
 		updateProfileId := mssql.UniqueIdentifier{}
 		updateSystemId := mssql.UniqueIdentifier{}
 		if err := rows.Scan(
 			&id,
-			&profile.Email,
+			&accountId,
 			&profile.FirstName,
 			&profile.MiddleName,
 			&profile.LastName,
@@ -98,9 +99,10 @@ func GetProfiles(tx *sql.Tx, wps WherePhrases) ([]Profile, error) {
 			return nil, err
 		}
 		profile.ID = id.String()
-		profile.InsertProfileID = insertProfileId.String()
+		profile.AccountID = accountId.String()
+		profile.InsertAccountID = insertProfileId.String()
 		profile.InsertSystemID = insertSystemId.String()
-		profile.UpdateProfileID = updateProfileId.String()
+		profile.UpdateAccountID = updateProfileId.String()
 		profile.UpdateSystemID = updateSystemId.String()
 		profiles = append(profiles, profile)
 	}
@@ -128,24 +130,27 @@ func (profile *Profile) Insert(tx *sql.Tx) error {
 func (profile *Profile) insert(tx *sql.Tx) error {
 	query := insertProfileQuery
 	id := mssql.UniqueIdentifier{}
-	insertProfileId := mssql.UniqueIdentifier{}
+	accountId := mssql.UniqueIdentifier{}
+	insertAccountId := mssql.UniqueIdentifier{}
 	insertSystemId := mssql.UniqueIdentifier{}
-	updateProfileId := mssql.UniqueIdentifier{}
+	updateAccountId := mssql.UniqueIdentifier{}
 	updateSystemId := mssql.UniqueIdentifier{}
-	insertProfileId.Scan(profile.InsertProfileID)
+	fmt.Println(profile.AccountID)
+	accountId.Scan(profile.AccountID)
+	insertAccountId.Scan(profile.InsertAccountID)
 	insertSystemId.Scan(profile.InsertSystemID)
-	updateProfileId.Scan(profile.UpdateProfileID)
+	updateAccountId.Scan(profile.UpdateAccountID)
 	updateSystemId.Scan(profile.UpdateSystemID)
 	err := tx.QueryRow(
 		query,
-		profile.Email,
+		accountId,
 		profile.FirstName,
 		profile.MiddleName,
 		profile.LastName,
 		profile.Nickname,
-		insertProfileId,
+		insertAccountId,
 		insertSystemId,
-		updateProfileId,
+		updateAccountId,
 		updateSystemId).Scan(&id)
 	if err != nil {
 		return err
@@ -156,7 +161,7 @@ func (profile *Profile) insert(tx *sql.Tx) error {
 
 func (profile *Profile) update(tx *sql.Tx) error {
 	up := NewUpdatePhrase("dbo", "Profile")
-	up.ColumnValue["UpdateProfileId"] = profile.UpdateProfileID
+	up.ColumnValue["UpdateProfileId"] = profile.UpdateAccountID
 
 	return nil
 }

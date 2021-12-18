@@ -59,6 +59,14 @@ func GetSha3Hash(u ...[]byte) []byte {
 	return hash
 }
 
+func GetPrivateKey() (*rsa.PrivateKey, error) {
+	// Generate Private/public key
+	// size of key (bits)
+	size := 2048
+	// Generate private and public key pair
+	return rsa.GenerateKey(rand.Reader, size)
+}
+
 // PrivateKeyToBytes private key to bytes
 func PrivateKeyToString(priv *rsa.PrivateKey) string {
 	privBytes := pem.EncodeToMemory(

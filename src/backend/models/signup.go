@@ -1,8 +1,6 @@
 package models
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"database/sql"
 	"fmt"
@@ -36,11 +34,8 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 	u := uuid.NewSHA1(uuid.New(), hash)
 	passhash := GetSha3Hash(hash, u.NodeID())
 
-	// Generate Private/public key
-	// size of key (bits)
-	size := 2048
 	// Generate private and public key pair
-	privateKey, err := rsa.GenerateKey(rand.Reader, size)
+	privateKey, err := GetPrivateKey()
 	if err != nil {
 		return authentication, err
 	}
@@ -60,16 +55,8 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 
 	if dbcontext != nil {
 		// Insert Database
-		profile := database.Profile{}
-		profile.Email = s.Email
-		profile.FirstName = s.FirstName
-		profile.MiddleName = s.MiddleName
-		profile.LastName = s.LastName
-		profile.Nickname = s.Nickname
-		profile.InsertSystemID = SIGNUP_SYSTEMID
-		profile.UpdateSystemID = SIGNUP_SYSTEMID
-
 		account := database.Account{}
+		account.Email = s.Email
 		account.Signature = signature
 		account.Private = private
 		account.Public = x509.MarshalPKCS1PublicKey(publicKey)
@@ -77,31 +64,20 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 		account.InsertSystemID = SIGNUP_SYSTEMID
 		account.UpdateSystemID = SIGNUP_SYSTEMID
 
+		profile := database.Profile{}
+		profile.FirstName = s.FirstName
+		profile.MiddleName = s.MiddleName
+		profile.LastName = s.LastName
+		profile.Nickname = s.Nickname
+		profile.InsertSystemID = SIGNUP_SYSTEMID
+		profile.UpdateSystemID = SIGNUP_SYSTEMID
 		tx, err := dbcontext.Begin()
 		if err != nil {
 			return authentication, err
 		}
 
-		profilewps := database.WherePhrases{}
-		profilewps.Append(database.Equal, "Email", s.Email)
-		profiles, err := database.GetProfiles(tx, profilewps)
-		if err != nil {
-			tx.Rollback()
-			return authentication, err
-		}
-		if len(profiles) > 0 {
-			tx.Rollback()
-			return authentication, fmt.Errorf("Profile is exists")
-		}
-
-		err = profile.Insert(tx)
-		if err != nil {
-			tx.Rollback()
-			return authentication, err
-		}
-
 		accountwps := database.WherePhrases{}
-		accountwps.Append(database.Equal, "ProfileID", profile.ID)
+		accountwps.Append(database.Equal, "Email", s.Email)
 		accountwps.Append(database.Equal, "ValidFlg", true)
 		accounts, err := database.GetAccounts(tx, accountwps)
 		if err != nil {
@@ -113,14 +89,22 @@ func (s *Signup) Signup(dbcontext *sql.DB) (Authentication, error) {
 			return authentication, fmt.Errorf("Account is exists")
 		}
 
-		account.ProfileID = profile.ID
-		account.InsertProfileID = account.ProfileID
-		account.UpdateProfileID = account.ProfileID
 		err = account.Insert(tx)
 		if err != nil {
 			tx.Rollback()
 			return authentication, err
 		}
+
+		profile.AccountID = account.ID
+		profile.InsertAccountID = account.ID
+		profile.UpdateAccountID = account.ID
+
+		err = profile.Insert(tx)
+		if err != nil {
+			tx.Rollback()
+			return authentication, err
+		}
+
 		tx.Commit()
 	}
 

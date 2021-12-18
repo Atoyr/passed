@@ -104,6 +104,7 @@ func action(c *cli.Context) error {
 	}
 
 	http.HandleFunc("/", handler) // ハンドラを登録してウェブページを表示させる
+	http.HandleFunc("/anonymous_key", signinHandler)
 	http.HandleFunc("/signup", signupHandler)
 	http.HandleFunc("/singin", signinHandler)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", webport), nil)

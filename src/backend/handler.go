@@ -18,7 +18,7 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		signup := models.Signup{}
 		signup.Email = "example@example.com"
-		signup.Password = "password"
+		signup.Password = "encript password"
 		signup.FirstName = "firstName"
 		signup.MiddleName = "middleName"
 		signup.LastName = "lastName"
@@ -85,4 +85,8 @@ func signinHandler(w http.ResponseWriter, r *http.Request) {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+func AnonymousKeyHandler(w http.ResponseWriter, r *http.Request) {
+
 }

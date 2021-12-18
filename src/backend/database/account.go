@@ -37,7 +37,7 @@ from
 `
 
 const insertAccountQuery string = `
-declare @nid = NEWID();
+declare @nid uniqueidentifier = NEWID();
 insert into [dbo].[Accounts] (
 	 [ID]
 	,[Email]
@@ -76,14 +76,13 @@ func GetAccounts(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 	for rows.Next() {
 		account := Account{}
 		id := mssql.UniqueIdentifier{}
-		profileId := mssql.UniqueIdentifier{}
 		insertProfileId := mssql.UniqueIdentifier{}
 		insertSystemId := mssql.UniqueIdentifier{}
 		updateProfileId := mssql.UniqueIdentifier{}
 		updateSystemId := mssql.UniqueIdentifier{}
 		if err := rows.Scan(
 			&id,
-			&profileId,
+			&account.Email,
 			&account.Signature,
 			&account.Private,
 			&account.Public,
@@ -98,7 +97,6 @@ func GetAccounts(tx *sql.Tx, wps WherePhrases) ([]Account, error) {
 			return nil, err
 		}
 		account.ID = id.String()
-		account.AccountID = profileId.String()
 		account.InsertAccountID = insertProfileId.String()
 		account.InsertSystemID = insertSystemId.String()
 		account.UpdateAccountID = updateProfileId.String()
@@ -147,26 +145,17 @@ func (account *Account) Update(tx *sql.Tx) error {
 func (account *Account) insert(tx *sql.Tx) error {
 	query := insertAccountQuery
 	id := mssql.UniqueIdentifier{}
-	profileId := mssql.UniqueIdentifier{}
 	insertSystemId := mssql.UniqueIdentifier{}
 	updateSystemId := mssql.UniqueIdentifier{}
-	insertProfileId := mssql.UniqueIdentifier{}
-	updateProfileId := mssql.UniqueIdentifier{}
-	profileId.Scan(account.AccountID)
 	insertSystemId.Scan(account.InsertSystemID)
 	updateSystemId.Scan(account.UpdateSystemID)
-	insertProfileId.Scan(account.InsertAccountID)
-	updateProfileId.Scan(account.UpdateAccountID)
 	err := tx.QueryRow(
 		query,
-		profileId,
+		account.Email,
 		account.Signature,
 		account.Private,
 		account.Public,
-		account.ValidFlg,
-		insertProfileId,
 		insertSystemId,
-		updateProfileId,
 		updateSystemId).Scan(&id)
 	if err != nil {
 		return err
