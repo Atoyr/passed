@@ -5,11 +5,18 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"time"
+
+	"github.com/atoyr/passed/models"
 )
 
 type AnonymousKey struct {
 	PrivateKey     *rsa.PrivateKey
 	CreateDatetime time.Time
+}
+
+type AnonymousPublicKey struct {
+	PublicKey      string    `json:"public_key"`
+	CreateDatetime time.Time `json:"create_datetime"`
 }
 
 type AnonymousKeyManager struct {
@@ -24,6 +31,14 @@ func NewAnonymousKey() AnonymousKey {
 	a.PrivateKey = privateKey
 	a.CreateDatetime = time.Now()
 	return a
+}
+
+func (anonymousKey *AnonymousKey) CreateAnonymousPublicKey() AnonymousPublicKey{
+	publicKey := models.PublicKeyToString(&anonymousKey.PrivateKey.PublicKey)
+	anonymousPublicKey := AnonymousPublicKey{}
+	anonymousPublicKey.PublicKey = publicKey
+	anonymousPublicKey.CreateDatetime = anonymousKey.CreateDatetime
+	return anonymousPublicKey
 }
 
 func NewAnonymousKeyManager() AnonymousKeyManager {
@@ -47,6 +62,6 @@ func (anonymousKeyManager *AnonymousKeyManager) Get(key string) (AnonymousKey, e
 		}
 		return anonymousKey, nil
 	} else {
-		return anonymousKey, fmt.Errorf("AnonymousKey not found")
+		return AnonymousKey {}, fmt.Errorf("AnonymousKey not found")
 	}
 }

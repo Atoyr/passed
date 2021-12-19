@@ -9,7 +9,10 @@ import (
 	"net/http"
 
 	"github.com/atoyr/passed/models"
+	"github.com/atoyr/passed/anonymous"
 )
+
+var AnonymousKeyManager *anonymous.AnonymousKeyManager
 
 func signupHandler(w http.ResponseWriter, r *http.Request) {
 	var retJson []byte
@@ -88,5 +91,34 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func AnonymousKeyHandler(w http.ResponseWriter, r *http.Request) {
+	if (AnonymousKeyManager == nil) {
+		AnonymousKeyManager = new(anonymous.AnonymousKeyManager)
+	}
+	var retJson []byte
+	switch r.Method {
+	case "GET":
+		ip, err := GetIP(r)
+		if (err != nil) {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		anonymousKey, err := AnonymousKeyManager.Get(ip)
+		if (err != nil) {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		anonymousPublicKey := anonymousKey.CreateAnonymousPublicKey()
 
+		retJson, err = json.Marshal(anonymousPublicKey)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(retJson)
+		return
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+	}
 }
